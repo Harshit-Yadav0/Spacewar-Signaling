@@ -1,36 +1,31 @@
-const express = require("express");
-const app = express();
-const http = require("http");
-const server = http.createServer(app);
+const WebSocket = require("ws");
 
-const { Server } = require("socket.io");
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+const wss = new WebSocket.Server({ port: 3000 });
 
-app.get("/", (req, res) => {
-    res.send("Relay Server Running 🚀");
-});
+let players = {};
 
-io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+wss.on("connection", (ws) => {
+    const id = Date.now().toString(); // simple unique id
+    players[id] = ws;
 
-    socket.on("join", (room) => {
-        socket.join(room);
-        console.log(`${socket.id} joined ${room}`);
+    console.log("Player connected:", id);
+
+    ws.on("message", (message) => {
+        let data = JSON.parse(message);
+
+        // attach sender id
+        data.id = id;
+
+        // broadcast to all except sender
+        for (let pid in players) {
+            if (pid !== id) {
+                players[pid].send(JSON.stringify(data));
+            }
+        }
     });
 
-    // 🔥 GAME DATA RELAY
-    socket.on("game_data", (data) => {
-        socket.to(data.room).emit("game_data", data);
+    ws.on("close", () => {
+        delete players[id];
+        console.log("Player disconnected:", id);
     });
-
-    socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
-    });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log("Server running on port", PORT);
 });
