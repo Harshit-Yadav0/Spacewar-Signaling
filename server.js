@@ -5,29 +5,24 @@ const server = http.createServer(app);
 
 const { Server } = require("socket.io");
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-    }
+    cors: { origin: "*" }
 });
 
-// Simple route (optional)
 app.get("/", (req, res) => {
-    res.send("Spacewar Signaling Server Running 🚀");
+    res.send("Relay Server Running 🚀");
 });
 
-// WebSocket logic
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
     socket.on("join", (room) => {
         socket.join(room);
-        console.log(`${socket.id} joined room ${room}`);
-
-        socket.to(room).emit("ready");
+        console.log(`${socket.id} joined ${room}`);
     });
 
-    socket.on("signal", (data) => {
-        socket.to(data.room).emit("signal", data);
+    // 🔥 GAME DATA RELAY
+    socket.on("game_data", (data) => {
+        socket.to(data.room).emit("game_data", data);
     });
 
     socket.on("disconnect", () => {
@@ -36,7 +31,6 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log("Server running on port", PORT);
 });
